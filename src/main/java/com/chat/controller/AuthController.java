@@ -2,6 +2,7 @@ package com.chat.controller;
 
 import com.chat.model.User;
 import com.chat.repository.UserRepository;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -49,11 +50,12 @@ public class AuthController {
         return "login";
     }
 
-    // 处理登录
+    // 登录成功处理（替换旧的 login 方法）
     @PostMapping("/login")
     public String login(@RequestParam String username,
                         @RequestParam String password,
-                        Model model) {
+                        Model model,
+                        HttpSession session) {
         User user = userRepository.findByUsername(username);
         if (user == null || !user.getPassword().equals(password)) {
             model.addAttribute("error", "用户名或密码错误");
@@ -61,16 +63,28 @@ public class AuthController {
         }
 
         if (!user.isApproved()) {
-            model.addAttribute("error", "账号未通过管理员审核");
+            model.addAttribute("error", "账号未审核");
             return "login";
         }
 
-        // 更新登录记录
         user.setLastLoginTime(LocalDateTime.now());
         user.setLoginCount(user.getLoginCount() + 1);
         userRepository.save(user);
 
-        model.addAttribute("user", user);
-        return "chat"; // 跳转到聊天页面（后续创建）
+        session.setAttribute("loginUser", user);
+        return "redirect:/chat";
     }
+
+    @GetMapping("/chat")
+    public String showChatPage() {
+        return "chat"; // 会自动渲染 templates/chat.html
+    }
+
+    @GetMapping("/logout")
+    public String logout(HttpSession session) {
+        session.invalidate();
+        return "redirect:/login";
+    }
+
+
 }

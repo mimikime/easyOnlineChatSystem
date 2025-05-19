@@ -57,6 +57,11 @@
 <body>
 <div class="login-container">
     <h2>用户登录</h2>
+
+    <div th:if="${error}" style="color:red; margin-bottom: 10px;">
+        <p th:text="${error}"></p>
+    </div>
+
     <form method="post" action="/login">
         <input type="text" name="username" placeholder="用户名" required>
         <input type="password" name="password" placeholder="密码" required>
