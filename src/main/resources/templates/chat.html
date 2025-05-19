@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="zh">
 <head>
@@ -6,11 +5,19 @@
     <title>聊天室</title>
 </head>
 <body>
-<h2>聊天室（群聊）</h2>
-<div id="chat-box" style="height:300px; overflow-y:scroll; border:1px solid #ccc;"></div>
+<h2>聊天室</h2>
+
+<div>
+    <label>发送给：</label>
+    <input type="text" id="to" placeholder="为空表示群聊">
+</div>
+<div id="chat-box" style="height:300px; overflow-y:scroll; border:1px solid #ccc; margin-top:10px;"></div>
 <br>
 <input type="text" id="msg" placeholder="输入消息" style="width:80%;">
 <button onclick="sendMessage()">发送</button>
+<br><br>
+<button onclick="loadHistory()">加载聊天记录</button>
+<button onclick="download()">下载聊天记录</button>
 
 <script>
     const username = prompt("请输入你的用户名");
@@ -23,10 +30,30 @@
     };
 
     function sendMessage() {
+        const to = document.getElementById("to").value;
         const msg = document.getElementById("msg").value;
-        socket.send(username + ": " + msg);
+        const payload = JSON.stringify({ from: username, to: to || null, content: msg });
+        socket.send(payload);
         document.getElementById("msg").value = "";
+    }
+
+    function loadHistory() {
+        fetch("/chat/history?username=" + username)
+            .then(res => res.json())
+            .then(data => {
+                const box = document.getElementById("chat-box");
+                box.innerHTML = "";
+                data.forEach(m => {
+                    const to = m.receiver ? (" → " + m.receiver) : "（群聊）";
+                    box.innerHTML += `<div>[${m.timestamp}] ${m.sender}${to}: ${m.message}</div>`;
+                });
+            });
+    }
+
+    function download() {
+        window.open("/chat/download?username=" + username);
     }
 </script>
 </body>
 </html>
+
