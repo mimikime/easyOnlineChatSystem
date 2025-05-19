@@ -1,3 +1,4 @@
+
 package com.chat.model;
 
 import jakarta.persistence.*;
@@ -10,50 +11,23 @@ public class ChatMessage {
     private Long id;
 
     private String sender;
-    private String receiver; // null 为群聊
-
-    @Column(columnDefinition = "TEXT")
+    private String receiver;
     private String message;
-
     private LocalDateTime timestamp = LocalDateTime.now();
 
-    public LocalDateTime getTimestamp() {
-        return timestamp;
-    }
+    // Getters and setters
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 
-    public void setTimestamp(LocalDateTime timestamp) {
-        this.timestamp = timestamp;
-    }
+    public String getSender() { return sender; }
+    public void setSender(String sender) { this.sender = sender; }
 
-    public String getMessage() {
-        return message;
-    }
+    public String getReceiver() { return receiver; }
+    public void setReceiver(String receiver) { this.receiver = receiver; }
 
-    public void setMessage(String message) {
-        this.message = message;
-    }
+    public String getMessage() { return message; }
+    public void setMessage(String message) { this.message = message; }
 
-    public Long getId() {
-        return id;
-    }
-
-    public String getReceiver() {
-        return receiver;
-    }
-
-    public void setReceiver(String receiver) {
-        this.receiver = receiver;
-    }
-
-    public String getSender() {
-        return sender;
-    }
-
-    public void setSender(String sender) {
-        this.sender = sender;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
+    public LocalDateTime getTimestamp() { return timestamp; }
+    public void setTimestamp(LocalDateTime timestamp) { this.timestamp = timestamp; }
 }
