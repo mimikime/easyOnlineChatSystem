@@ -1,59 +1,202 @@
+
 <!DOCTYPE html>
 <html lang="zh">
 <head>
-    <meta charset="UTF-8">
-    <title>聊天室</title>
+  <meta charset="UTF-8">
+  <title>WebChat 聊天系统</title>
+  <style>
+    body { margin: 0; font-family: Arial; display: flex; height: 100vh; }
+    .sidebar {
+      width: 260px; background: #2e3238; color: white;
+      display: flex; flex-direction: column;
+    }
+    .profile { padding: 20px; border-bottom: 1px solid #444; }
+    .section { padding: 10px; border-bottom: 1px solid #444; }
+    .item {
+      padding: 8px 15px; cursor: pointer;
+      border-bottom: 1px solid #444;
+    }
+    .item:hover { background: #3a3f45; }
+    .main {
+      flex: 1; display: flex; flex-direction: column;
+    }
+    .header { background: #eee; padding: 10px 15px; }
+    .chat-box {
+      flex: 1; overflow-y: auto; padding: 15px;
+      background: #f5f5f5;
+    }
+    .chat-message { margin: 8px 0; }
+    .from-me { text-align: right; color: #06c; }
+    .from-other { text-align: left; color: #000; }
+    .chat-input {
+      display: flex; padding: 10px; border-top: 1px solid #ccc;
+      background: white;
+    }
+    .chat-input input {
+      flex: 1; padding: 8px; border: 1px solid #ccc;
+    }
+    .chat-input button {
+      margin-left: 10px; padding: 8px 16px;
+      background: #06c; color: white; border: none;
+    }
+    .dialog {
+      position: fixed; top: 20%; left: 30%;
+      background: white; border: 1px solid #aaa;
+      padding: 20px; z-index: 1000;
+    }
+  </style>
 </head>
 <body>
-<h2>聊天室</h2>
 
-<div>
-    <label>发送给：</label>
-    <input type="text" id="to" placeholder="为空表示群聊">
+<div class="sidebar">
+  <div class="profile">
+    用户：<span id="myname">未知</span>
+  </div>
+  <div class="section">好友</div>
+  <div id="friend-list"></div>
+  <div class="section">群聊</div>
+  <div id="group-list"></div>
+  <div class="section">
+    <button onclick="addFriend()">加好友</button>
+    <button onclick="showRequests()">验证请求</button>
+    <button onclick="joinGroup()">加群聊</button>
+  </div>
 </div>
-<div id="chat-box" style="height:300px; overflow-y:scroll; border:1px solid #ccc; margin-top:10px;"></div>
-<br>
-<input type="text" id="msg" placeholder="输入消息" style="width:80%;">
-<button onclick="sendMessage()">发送</button>
-<br><br>
-<button onclick="loadHistory()">加载聊天记录</button>
-<button onclick="download()">下载聊天记录</button>
+
+<div class="main">
+  <div class="header">
+    聊天中：<span id="target">(未选择)</span>
+  </div>
+  <div class="chat-box" id="chat-box"></div>
+  <div class="chat-input">
+    <input type="text" id="msg" placeholder="输入消息">
+    <button onclick="send()">发送</button>
+  </div>
+</div>
+
+<div id="dialog" class="dialog" style="display:none;">
+  <h4>待处理好友请求</h4>
+  <div id="requests"></div>
+  <button onclick="closeDialog()">关闭</button>
+</div>
 
 <script>
-    const username = prompt("请输入你的用户名");
-    const socket = new WebSocket("ws://localhost:8080/ws/chat?username=" + username);
+  const username = prompt("请输入你的用户名");
+  document.getElementById("myname").innerText = username;
+  let currentTo = null;
+  let isGroup = false;
 
-    socket.onmessage = function(event) {
-        const box = document.getElementById("chat-box");
-        box.innerHTML += "<div>" + event.data + "</div>";
-        box.scrollTop = box.scrollHeight;
+  const socket = new WebSocket("ws://localhost:8080/ws/chat?username=" + username);
+
+  socket.onmessage = e => {
+    const box = document.getElementById("chat-box");
+    const msg = document.createElement("div");
+    msg.className = "chat-message from-other";
+    msg.innerText = e.data;
+    box.appendChild(msg);
+    box.scrollTop = box.scrollHeight;
+  };
+
+  function send() {
+    const msg = document.getElementById("msg").value.trim();
+    if (!msg || !currentTo) return;
+
+    const data = {
+      from: username,
+      to: currentTo,
+      content: msg,
+      group: isGroup
     };
+    socket.send(JSON.stringify(data));
+    const box = document.getElementById("chat-box");
+    const mine = document.createElement("div");
+    mine.className = "chat-message from-me";
+    mine.innerText = username + ": " + msg;
+    box.appendChild(mine);
+    box.scrollTop = box.scrollHeight;
+    document.getElementById("msg").value = "";
+  }
 
-    function sendMessage() {
-        const to = document.getElementById("to").value;
-        const msg = document.getElementById("msg").value;
-        const payload = JSON.stringify({ from: username, to: to || null, content: msg });
-        socket.send(payload);
-        document.getElementById("msg").value = "";
-    }
+  function setTarget(name, group) {
+    currentTo = name;
+    isGroup = group;
+    document.getElementById("target").innerText = name + (group ? "（群聊）" : "");
+    document.getElementById("chat-box").innerHTML = "";
+  }
 
-    function loadHistory() {
-        fetch("/chat/history?username=" + username)
-            .then(res => res.json())
-            .then(data => {
-                const box = document.getElementById("chat-box");
-                box.innerHTML = "";
-                data.forEach(m => {
-                    const to = m.receiver ? (" → " + m.receiver) : "（群聊）";
-                    box.innerHTML += `<div>[${m.timestamp}] ${m.sender}${to}: ${m.message}</div>`;
-                });
-            });
-    }
+  function load() {
+    fetch("/friend/list?user=" + username)
+      .then(res => res.json())
+      .then(data => {
+        const box = document.getElementById("friend-list");
+        box.innerHTML = "";
+        data.forEach(f => {
+          const item = document.createElement("div");
+          item.className = "item";
+          item.innerText = f.friend;
+          item.onclick = () => setTarget(f.friend, false);
+          box.appendChild(item);
+        });
+      });
 
-    function download() {
-        window.open("/chat/download?username=" + username);
+    fetch("/group/list?user=" + username)
+      .then(res => res.json())
+      .then(data => {
+        const box = document.getElementById("group-list");
+        box.innerHTML = "";
+        data.forEach(g => {
+          const item = document.createElement("div");
+          item.className = "item";
+          item.innerText = g.name;
+          item.onclick = () => setTarget(g.name, true);
+          box.appendChild(item);
+        });
+      });
+  }
+
+  function addFriend() {
+    const friend = prompt("输入对方用户名");
+    if (friend) {
+      fetch("/friend/add?user=" + username + "&friend=" + friend, { method: "POST" })
+        .then(r => r.text()).then(alert);
     }
+  }
+
+  function joinGroup() {
+    const group = prompt("输入群聊名");
+    if (group) {
+      fetch("/group/join?user=" + username + "&group=" + group, { method: "POST" })
+        .then(r => r.text()).then(alert).then(load);
+    }
+  }
+
+  function showRequests() {
+    document.getElementById("dialog").style.display = "block";
+    fetch("/friend/requests?username=" + username)
+      .then(res => res.json())
+      .then(data => {
+        const box = document.getElementById("requests");
+        box.innerHTML = "";
+        data.forEach(r => {
+          box.innerHTML += `<div>${r.user} 请求添加你为好友 
+            <button onclick="approve(${r.id})">通过</button></div>`;
+        });
+      });
+  }
+
+  function approve(id) {
+    fetch("/friend/approve?requestId=" + id, { method: "POST" })
+      .then(r => r.text()).then(alert).then(() => {
+        closeDialog(); load();
+      });
+  }
+
+  function closeDialog() {
+    document.getElementById("dialog").style.display = "none";
+  }
+
+  load();
 </script>
+
 </body>
 </html>
-

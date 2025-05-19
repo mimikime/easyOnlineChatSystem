@@ -30,19 +30,14 @@ public class ChatController {
     public void download(@RequestParam String username, HttpServletResponse response) throws Exception {
         List<ChatMessage> messages = messageRepository.findBySenderOrReceiver(username, username);
 
-        response.setContentType("text/plain; charset=UTF-8");
+        response.setContentType("text/plain");
         response.setHeader("Content-Disposition", "attachment;filename=chat_history.txt");
 
-        response.setCharacterEncoding("UTF-8");
         PrintWriter writer = response.getWriter();
-
         for (ChatMessage msg : messages) {
-            String to = msg.getReceiver() == null ? "群聊" : msg.getReceiver();
-            writer.println("[" + msg.getTimestamp() + "] " + msg.getSender() + " → " + to + ": " + msg.getMessage());
+            writer.println("[" + msg.getTimestamp() + "] " + msg.getSender() + " → " + (msg.getReceiver() == null ? "群聊" : msg.getReceiver()) + ": " + msg.getMessage());
         }
-
         writer.flush();
         writer.close();
     }
-
 }
