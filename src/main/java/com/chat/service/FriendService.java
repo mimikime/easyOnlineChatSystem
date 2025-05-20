@@ -1,0 +1,124 @@
+
+package com.chat.service;
+
+import com.chat.model.FriendGroup;
+import com.chat.model.FriendRequest;
+import com.chat.model.User;
+import com.chat.repository.FriendGroupRepository;
+import com.chat.repository.FriendRequestRepository;
+import com.chat.repository.FriendRepository;
+import com.chat.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.*;
+
+@Service
+public class FriendService {
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private FriendGroupRepository friendGroupRepository;
+
+    @Autowired
+    private FriendRequestRepository friendRequestRepository;
+
+    @Autowired
+    private FriendRepository friendRepository;
+
+    public void createDefaultGroupIfNotExists(Long userId) {
+        if (!friendGroupRepository.existsByUserIdAndGroupName(userId, "默认分组")) {
+            FriendGroup group = new FriendGroup();
+            group.setUserId(userId);
+            group.setGroupName("默认分组");
+            friendGroupRepository.save(group);
+        }
+    }
+
+    public String sendFriendRequest(String senderUsername, String targetUsername) {
+        Optional<User> sender = userRepository.findByUsername(senderUsername);
+        Optional<User> receiver = userRepository.findByUsername(targetUsername);
+        if (sender.isEmpty() || receiver.isEmpty()) return "用户不存在";
+        if (sender.get().getId().equals(receiver.get().getId())) return "不能添加自己为好友";
+
+        // 检查是否已是好友
+        Long count = friendRepository.countFriendRelation(sender.get().getId(), receiver.get().getId());
+        if (count != null && count > 0) return "你们已经是好友";
+
+
+        FriendRequest request = new FriendRequest();
+        request.setSenderId(sender.get().getId());
+        request.setReceiverId(receiver.get().getId());
+        request.setStatus("PENDING");
+        friendRequestRepository.save(request);
+        return "请求已发送";
+    }
+
+    public String acceptFriendRequest(Long requestId) {
+        Optional<FriendRequest> requestOpt = friendRequestRepository.findById(requestId);
+        if (requestOpt.isEmpty()) return "请求不存在";
+
+        FriendRequest request = requestOpt.get();
+        request.setStatus("ACCEPTED");
+        friendRequestRepository.save(request);
+
+        Long senderId = request.getSenderId();
+        Long receiverId = request.getReceiverId();
+
+        // 确保双方都有默认分组
+        createDefaultGroupIfNotExists(senderId);
+        createDefaultGroupIfNotExists(receiverId);
+
+        Long senderGroupId = friendGroupRepository.findByUserIdAndGroupName(senderId, "默认分组").get().getId();
+        Long receiverGroupId = friendGroupRepository.findByUserIdAndGroupName(receiverId, "默认分组").get().getId();
+
+        // 双向加好友
+        friendRepository.insertFriend(senderId, receiverId, senderGroupId);
+        friendRepository.insertFriend(receiverId, senderId, receiverGroupId);
+
+        return "已添加为好友";
+    }
+
+    public String deleteFriend(String username, String friendUsername) {
+        Optional<User> user = userRepository.findByUsername(username);
+        Optional<User> friend = userRepository.findByUsername(friendUsername);
+        if (user.isEmpty() || friend.isEmpty()) return "用户不存在";
+
+        friendRepository.deleteByUserIdAndFriendId(user.get().getId(), friend.get().getId());
+        friendRepository.deleteByUserIdAndFriendId(friend.get().getId(), user.get().getId());
+
+        return "好友已删除";
+    }
+
+
+    public List<Map<String, Object>> getPendingRequests(String receiverUsername) {
+        Optional<User> receiver = userRepository.findByUsername(receiverUsername);
+        if (receiver.isEmpty()) return Collections.emptyList();
+
+        List<FriendRequest> requests = friendRequestRepository.findByReceiverIdAndStatus(receiver.get().getId(), "PENDING");
+
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (FriendRequest req : requests) {
+            Optional<User> sender = userRepository.findById(req.getSenderId());
+            sender.ifPresent(user -> {
+                Map<String, Object> map = new HashMap<>();
+                map.put("id", req.getId());
+                map.put("senderUsername", user.getUsername());
+                result.add(map);
+            });
+        }
+        return result;
+    }
+
+    public String rejectFriendRequest(Long requestId) {
+        Optional<FriendRequest> requestOpt = friendRequestRepository.findById(requestId);
+        if (requestOpt.isEmpty()) return "请求不存在";
+        FriendRequest request = requestOpt.get();
+        request.setStatus("REJECTED");
+        friendRequestRepository.save(request);
+        return "已拒绝";
+    }
+
+}

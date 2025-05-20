@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
 <head>
@@ -154,6 +153,26 @@
         }
     </style>
 </head>
+<!-- 添加好友模态框 -->
+<div id="addModal" class="modal">
+    <div class="modal-content">
+        <h3>添加好友</h3>
+        <input type="text" id="friendUsername" placeholder="请输入用户名">
+        <button onclick="submitAddFriend()">发送请求</button>
+    </div>
+</div>
+
+<!-- 好友验证弹窗 -->
+<div id="verifyModal" class="modal">
+    <div class="modal-content">
+        <h3>好友验证请求</h3>
+        <ul id="requestList" style="list-style: none; padding: 0;"></ul>
+        <button onclick="closeVerifyModal()">关闭</button>
+    </div>
+</div>
+
+
+
 <body>
 <div class="main-container">
     <div class="sidebar">
@@ -175,9 +194,9 @@
 
         </div>
         <div class="actions">
-            <button onclick="alert('添加好友')">添加好友</button>
+            <button onclick="showVerifyModal()">好友验证</button>
+            <button onclick="showAddFriendModal()">添加好友</button>
             <button onclick="alert('添加群')">添加群</button>
-            <button onclick="alert('创建群')">创建群</button>
         </div>
     </div>
 
@@ -198,5 +217,77 @@
         </div>
     </div>
 </div>
+<script>
+    function showAddFriendModal() {
+        document.getElementById("addModal").style.display = "block";
+    }
+
+    function submitAddFriend() {
+        const username = document.getElementById("friendUsername").value.trim();
+        if (!username) {
+            alert("请输入用户名");
+            return;
+        }
+
+        fetch('/friend/request?targetUsername=' + encodeURIComponent(username), {
+            method: 'POST'
+        })
+            .then(resp => resp.text())
+            .then(msg => alert(msg))
+            .catch(err => alert("请求失败：" + err));
+
+        document.getElementById("addModal").style.display = "none";
+    }
+
+    window.onclick = function(event) {
+        const modal = document.getElementById("addModal");
+        if (event.target === modal) {
+            modal.style.display = "none";
+        }
+    }
+
+    function showVerifyModal() {
+        const modal = document.getElementById("verifyModal");
+        const list = document.getElementById("requestList");
+        list.innerHTML = "";
+
+        fetch('/friend/pending')
+            .then(resp => resp.json())
+            .then(data => {
+                if (data.length === 0) {
+                    list.innerHTML = "<li>暂无好友请求</li>";
+                } else {
+                    data.forEach(req => {
+                        const item = document.createElement("li");
+                        item.style.marginBottom = "10px";
+                        item.innerHTML =
+                            "来自用户：" + req.senderUsername + " " +
+                            "<button onclick='handleRequest(" + req.id + ", true)'>同意</button> " +
+                            "<button onclick='handleRequest(" + req.id + ", false)'>拒绝</button>";
+                        list.appendChild(item);
+                    });
+                }
+                modal.style.display = "block";
+            })
+            .catch(err => {
+                alert("加载请求失败：" + err);
+            });
+    }
+
+    function handleRequest(id, accept) {
+        const url = accept ? "/friend/accept?requestId=" + id : "/friend/reject?requestId=" + id;
+        fetch(url, { method: 'POST' })
+            .then(resp => resp.text())
+            .then(msg => {
+                alert(msg);
+                showVerifyModal(); // 刷新请求列表
+            });
+    }
+
+    function closeVerifyModal() {
+        document.getElementById("verifyModal").style.display = "none";
+    }
+</script>
+
 </body>
 </html>

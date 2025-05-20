@@ -12,10 +12,10 @@ public class WebSecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http.csrf(csrf -> csrf.disable())
-                .authorizeHttpRequests(authz -> authz
-                        .requestMatchers("/auth/register", "/auth/login", "/login", "/register", "/style.css", "/static/**","/chat").permitAll()  // 允许访问静态文件和登录注册页面
-                        .anyRequest().authenticated()  // 其他请求需要认证
+        http
+                .csrf(csrf -> csrf.disable()) // 关闭 CSRF
+                .authorizeHttpRequests(auth -> auth
+                        .anyRequest().permitAll() // 所有请求都允许
                 );
 
         return http.build();
@@ -26,4 +26,3 @@ public class WebSecurityConfig {
         return new BCryptPasswordEncoder();
     }
 }
-

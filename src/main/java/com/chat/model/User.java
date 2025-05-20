@@ -1,11 +1,9 @@
 package com.chat.model;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 
 @Entity
+@Table(name = "users")
 public class User {
 
     @Id
@@ -39,5 +37,6 @@ public class User {
     public void setId(Long id) {
         this.id = id;
     }
-// Getter 和 Setter
+
+
 }
