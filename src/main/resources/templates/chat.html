@@ -1,202 +1,202 @@
 
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
 <head>
-  <meta charset="UTF-8">
-  <title>WebChat 聊天系统</title>
-  <style>
-    body { margin: 0; font-family: Arial; display: flex; height: 100vh; }
-    .sidebar {
-      width: 260px; background: #2e3238; color: white;
-      display: flex; flex-direction: column;
-    }
-    .profile { padding: 20px; border-bottom: 1px solid #444; }
-    .section { padding: 10px; border-bottom: 1px solid #444; }
-    .item {
-      padding: 8px 15px; cursor: pointer;
-      border-bottom: 1px solid #444;
-    }
-    .item:hover { background: #3a3f45; }
-    .main {
-      flex: 1; display: flex; flex-direction: column;
-    }
-    .header { background: #eee; padding: 10px 15px; }
-    .chat-box {
-      flex: 1; overflow-y: auto; padding: 15px;
-      background: #f5f5f5;
-    }
-    .chat-message { margin: 8px 0; }
-    .from-me { text-align: right; color: #06c; }
-    .from-other { text-align: left; color: #000; }
-    .chat-input {
-      display: flex; padding: 10px; border-top: 1px solid #ccc;
-      background: white;
-    }
-    .chat-input input {
-      flex: 1; padding: 8px; border: 1px solid #ccc;
-    }
-    .chat-input button {
-      margin-left: 10px; padding: 8px 16px;
-      background: #06c; color: white; border: none;
-    }
-    .dialog {
-      position: fixed; top: 20%; left: 30%;
-      background: white; border: 1px solid #aaa;
-      padding: 20px; z-index: 1000;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <title>聊天系统</title>
+    <link rel="stylesheet" th:href="@{/style.css}">
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', sans-serif;
+            background: #f4f7fa;
+        }
+
+        .main-container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .sidebar {
+            width: 260px;
+            background: #2c3e50;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+        }
+
+        .sidebar h2 {
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+
+        .sidebar .section {
+            margin-bottom: 20px;
+        }
+
+        .sidebar .section h3 {
+            font-size: 14px;
+            margin-bottom: 8px;
+            border-bottom: 1px solid #7f8c8d;
+            padding-bottom: 5px;
+        }
+
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .sidebar ul li {
+            margin: 4px 0;
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .sidebar ul li:hover {
+            background-color: #34495e;
+        }
+
+        .sidebar .actions {
+            margin-top: 20px;
+        }
+
+        .sidebar .actions button {
+            width: 100%;
+            margin-top: 8px;
+            padding: 8px;
+            border: none;
+            background-color: #1abc9c;
+            color: white;
+            font-size: 14px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .sidebar .actions button:hover {
+            background-color: #16a085;
+        }
+
+        .chat-area {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+
+        .chat-header {
+            font-size: 18px;
+            font-weight: bold;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #ccc;
+        }
+
+        .chat-toolbar {
+            display: flex;
+            justify-content: flex-end;
+            margin: 10px 0;
+            gap: 10px;
+        }
+
+        .chat-toolbar button {
+            padding: 6px 12px;
+            border: none;
+            background-color: #95a5a6;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .chat-toolbar button:hover {
+            background-color: #7f8c8d;
+        }
+
+        .chat-messages {
+            flex-grow: 1;
+            overflow-y: auto;
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 15px;
+        }
+
+        .chat-input {
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .chat-input textarea {
+            flex-grow: 1;
+            height: 60px;
+            padding: 10px;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            resize: none;
+        }
+
+        .chat-input button {
+            padding: 0 20px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .chat-input button:hover {
+            background-color: #2980b9;
+        }
+    </style>
 </head>
 <body>
+<div class="main-container">
+    <div class="sidebar">
+        <div>
+            <h2>用户：<span th:text="${username}">用户名</span></h2>
+            <div class="section">
+                <h3>好友分组</h3>
+                <ul>
+                    <li th:each="group : ${friendGroups}" th:text="${group}">分组名</li>
+                </ul>
+            </div>
 
-<div class="sidebar">
-  <div class="profile">
-    用户：<span id="myname">未知</span>
-  </div>
-  <div class="section">好友</div>
-  <div id="friend-list"></div>
-  <div class="section">群聊</div>
-  <div id="group-list"></div>
-  <div class="section">
-    <button onclick="addFriend()">加好友</button>
-    <button onclick="showRequests()">验证请求</button>
-    <button onclick="joinGroup()">加群聊</button>
-  </div>
+            <div class="section">
+                <h3>群组</h3>
+                <ul>
+                    <li th:each="group : ${chatGroups}" th:text="${group.name}">群组名</li>
+                </ul>
+            </div>
+
+        </div>
+        <div class="actions">
+            <button onclick="alert('添加好友')">添加好友</button>
+            <button onclick="alert('添加群')">添加群</button>
+            <button onclick="alert('创建群')">创建群</button>
+        </div>
+    </div>
+
+    <div class="chat-area">
+        <div class="chat-header">
+            当前聊天对象：<span id="chat-target">未选择</span>
+        </div>
+        <div class="chat-toolbar">
+            <button onclick="alert('查看历史记录')">历史记录</button>
+            <button onclick="alert('下载聊天记录')">下载记录</button>
+        </div>
+        <div class="chat-messages" id="chatMessages">
+            <!-- 聊天消息区域 -->
+        </div>
+        <div class="chat-input">
+            <textarea placeholder="输入消息..."></textarea>
+            <button>发送</button>
+        </div>
+    </div>
 </div>
-
-<div class="main">
-  <div class="header">
-    聊天中：<span id="target">(未选择)</span>
-  </div>
-  <div class="chat-box" id="chat-box"></div>
-  <div class="chat-input">
-    <input type="text" id="msg" placeholder="输入消息">
-    <button onclick="send()">发送</button>
-  </div>
-</div>
-
-<div id="dialog" class="dialog" style="display:none;">
-  <h4>待处理好友请求</h4>
-  <div id="requests"></div>
-  <button onclick="closeDialog()">关闭</button>
-</div>
-
-<script>
-  const username = prompt("请输入你的用户名");
-  document.getElementById("myname").innerText = username;
-  let currentTo = null;
-  let isGroup = false;
-
-  const socket = new WebSocket("ws://localhost:8080/ws/chat?username=" + username);
-
-  socket.onmessage = e => {
-    const box = document.getElementById("chat-box");
-    const msg = document.createElement("div");
-    msg.className = "chat-message from-other";
-    msg.innerText = e.data;
-    box.appendChild(msg);
-    box.scrollTop = box.scrollHeight;
-  };
-
-  function send() {
-    const msg = document.getElementById("msg").value.trim();
-    if (!msg || !currentTo) return;
-
-    const data = {
-      from: username,
-      to: currentTo,
-      content: msg,
-      group: isGroup
-    };
-    socket.send(JSON.stringify(data));
-    const box = document.getElementById("chat-box");
-    const mine = document.createElement("div");
-    mine.className = "chat-message from-me";
-    mine.innerText = username + ": " + msg;
-    box.appendChild(mine);
-    box.scrollTop = box.scrollHeight;
-    document.getElementById("msg").value = "";
-  }
-
-  function setTarget(name, group) {
-    currentTo = name;
-    isGroup = group;
-    document.getElementById("target").innerText = name + (group ? "（群聊）" : "");
-    document.getElementById("chat-box").innerHTML = "";
-  }
-
-  function load() {
-    fetch("/friend/list?user=" + username)
-      .then(res => res.json())
-      .then(data => {
-        const box = document.getElementById("friend-list");
-        box.innerHTML = "";
-        data.forEach(f => {
-          const item = document.createElement("div");
-          item.className = "item";
-          item.innerText = f.friend;
-          item.onclick = () => setTarget(f.friend, false);
-          box.appendChild(item);
-        });
-      });
-
-    fetch("/group/list?user=" + username)
-      .then(res => res.json())
-      .then(data => {
-        const box = document.getElementById("group-list");
-        box.innerHTML = "";
-        data.forEach(g => {
-          const item = document.createElement("div");
-          item.className = "item";
-          item.innerText = g.name;
-          item.onclick = () => setTarget(g.name, true);
-          box.appendChild(item);
-        });
-      });
-  }
-
-  function addFriend() {
-    const friend = prompt("输入对方用户名");
-    if (friend) {
-      fetch("/friend/add?user=" + username + "&friend=" + friend, { method: "POST" })
-        .then(r => r.text()).then(alert);
-    }
-  }
-
-  function joinGroup() {
-    const group = prompt("输入群聊名");
-    if (group) {
-      fetch("/group/join?user=" + username + "&group=" + group, { method: "POST" })
-        .then(r => r.text()).then(alert).then(load);
-    }
-  }
-
-  function showRequests() {
-    document.getElementById("dialog").style.display = "block";
-    fetch("/friend/requests?username=" + username)
-      .then(res => res.json())
-      .then(data => {
-        const box = document.getElementById("requests");
-        box.innerHTML = "";
-        data.forEach(r => {
-          box.innerHTML += `<div>${r.user} 请求添加你为好友 
-            <button onclick="approve(${r.id})">通过</button></div>`;
-        });
-      });
-  }
-
-  function approve(id) {
-    fetch("/friend/approve?requestId=" + id, { method: "POST" })
-      .then(r => r.text()).then(alert).then(() => {
-        closeDialog(); load();
-      });
-  }
-
-  function closeDialog() {
-    document.getElementById("dialog").style.display = "none";
-  }
-
-  load();
-</script>
-
 </body>
 </html>
