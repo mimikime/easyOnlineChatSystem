@@ -192,6 +192,26 @@
     </div>
 </div>
 
+<div id="contextMenu" class="context-menu" style="display: none; position: absolute;">
+    <ul>
+        <li onclick="deleteFriend()">删除好友</li>
+        <li onclick="showMoveGroupModal('好友名')">移动分组</li>
+    </ul>
+</div>
+
+<div id="moveGroupModal" class="modal" style="display:none;">
+    <div class="modal-content">
+        <span class="close" onclick="closeMoveGroupModal()">&times;</span>
+        <h3>选择目标分组</h3>
+        <select id="groupSelect">
+            <!-- 选项由 JS 动态填充 -->
+        </select>
+        <br><br>
+        <button onclick="confirmMoveGroup()">确认移动</button>
+    </div>
+</div>
+
+
 
 
 <body>
@@ -311,7 +331,7 @@
     }
 
 
-        function loadFriendGroups() {
+    function loadFriendGroups() {
         fetch('/friend/groups')
             .then(res => res.json())
             .then(data => {
@@ -325,19 +345,22 @@
                     groupDiv.appendChild(groupTitle);
 
                     const ul = document.createElement('ul');
-                    data[groupName].forEach(friend => {
+                    data[groupName].forEach(username => {
                         const li = document.createElement('li');
-                        li.innerText = friend;
+                        li.innerText = username;
+                        // 如果你没有 ID，就不要绑定 ID 相关操作
+                        li.oncontextmenu = (e) => showFriendContextMenu(e, username); // 用用户名作为 ID 标识
                         ul.appendChild(li);
                     });
+
 
                     groupDiv.appendChild(ul);
                     container.appendChild(groupDiv);
                 }
-            })
-            .catch(e => console.error("加载好友分组失败", e));
+            });
     }
-        window.onload = loadFriendGroups;
+
+    window.onload = loadFriendGroups;
 
         function showCreateFriendGroupModal() {
         document.getElementById('friendGroupModal').style.display = 'block';
@@ -384,6 +407,144 @@
     function closeModal(id) {
         document.getElementById(id).style.display = 'none';
     }
+
+    let selectedFriendId = null;
+
+    function showFriendContextMenu(event, friendId) {
+        event.preventDefault();
+        selectedFriendId = friendId;
+
+        const menu = document.getElementById('contextMenu');
+        menu.style.top = `${event.clientY}px`;
+        menu.style.left = `${event.clientX}px`;
+        menu.style.display = 'block';
+
+        document.addEventListener('click', hideContextMenu);
+    }
+
+    function hideContextMenu() {
+        document.getElementById('contextMenu').style.display = 'none';
+        document.removeEventListener('click', hideContextMenu);
+    }
+
+    let selectedFriendUsername = null;
+
+    function loadFriendGroups() {
+        fetch('/friend/groups')
+            .then(res => res.json())
+            .then(data => {
+                const container = document.getElementById('friend-groups-container');
+                container.innerHTML = '';
+
+                for (const groupName in data) {
+                    const groupDiv = document.createElement('div');
+                    const groupTitle = document.createElement('h4');
+                    groupTitle.innerText = groupName;
+                    groupDiv.appendChild(groupTitle);
+
+                    const ul = document.createElement('ul');
+                    data[groupName].forEach(friend => {
+                        const li = document.createElement('li');
+                        li.innerText = friend;
+
+                        // 添加右键事件
+                        li.addEventListener('contextmenu', (e) => {
+                            e.preventDefault();
+                            selectedFriendUsername = friend;
+                            showContextMenu(e.pageX, e.pageY);
+                        });
+
+                        ul.appendChild(li);
+                    });
+
+                    groupDiv.appendChild(ul);
+                    container.appendChild(groupDiv);
+                }
+            })
+            .catch(e => console.error("加载好友分组失败", e));
+    }
+
+    function showContextMenu(x, y) {
+        const menu = document.getElementById('contextMenu');
+        menu.style.left = x + 'px';
+        menu.style.top = y + 'px';
+        menu.style.display = 'block';
+    }
+
+    window.addEventListener('click', () => {
+        document.getElementById('contextMenu').style.display = 'none';
+    });
+
+    function deleteFriend() {
+        if (!selectedFriendUsername) return;
+
+        fetch('/friend/delete', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: 'friendUsername=' + encodeURIComponent(selectedFriendUsername)
+        })
+            .then(res => res.text())
+            .then(msg => {
+                alert(msg);
+                loadFriendGroups();
+            });
+    }
+
+
+
+    function showMoveGroupModal() {
+        if (!selectedFriendUsername) return;
+
+        fetch(`/friend/group/names?friendUsername=${encodeURIComponent(selectedFriendUsername)}`)
+            .then(res => res.json())
+            .then(data => {
+                const { currentGroup, groups } = data;
+
+                const select = document.getElementById('groupSelect');
+                select.innerHTML = '';
+
+                groups.forEach(name => {
+                    if (name !== currentGroup) {
+                        const option = document.createElement('option');
+                        option.value = name;
+                        option.innerText = name;
+                        select.appendChild(option);
+                    }
+                });
+
+                currentFriend = selectedFriendUsername;
+                document.getElementById('moveGroupModal').style.display = 'block';
+            })
+            .catch(err => alert("加载分组失败：" + err));
+    }
+
+    let currentFriend = ''; // 保存右键点击的好友名
+
+
+
+    function closeMoveGroupModal() {
+        document.getElementById('moveGroupModal').style.display = 'none';
+    }
+
+    function confirmMoveGroup() {
+        const targetGroup = document.getElementById('groupSelect').value;
+        if (!targetGroup || !currentFriend) return;
+
+        fetch('/friend/move', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `friendUsername=${encodeURIComponent(currentFriend)}&targetGroupName=${encodeURIComponent(targetGroup)}`
+        })
+            .then(res => res.text())
+            .then(msg => {
+                alert(msg);
+                closeMoveGroupModal();
+                loadFriendGroups();
+            });
+    }
+
 
 </script>
 

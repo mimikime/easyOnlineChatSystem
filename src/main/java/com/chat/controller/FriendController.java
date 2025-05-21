@@ -31,12 +31,6 @@ public class FriendController {
         return friendService.acceptFriendRequest(requestId);
     }
 
-    @PostMapping("/delete")
-    public String delete(@RequestParam String friendUsername, HttpSession session) {
-        String username = (String) session.getAttribute("username");
-        return friendService.deleteFriend(username, friendUsername);
-    }
-
 
     @GetMapping("/pending")
     public List<Map<String, Object>> pending(HttpSession session) {
@@ -67,6 +61,30 @@ public class FriendController {
         String username = (String) session.getAttribute("username");
         return friendService.getGroups(username);  // 返回 List<FriendGroup>
     }
+
+
+    @PostMapping("/delete")
+    public String delete(@RequestParam String friendUsername, HttpSession session) {
+        String username = (String) session.getAttribute("username");
+        return friendService.deleteFriend(username, friendUsername);
+    }
+
+
+    @PostMapping("/move")
+    public String moveFriendToGroup(@RequestParam String friendUsername,
+                                    @RequestParam String targetGroupName,
+                                    HttpSession session) {
+        String username = (String) session.getAttribute("username");
+        return friendService.moveFriendToGroup(username, friendUsername, targetGroupName);
+    }
+
+    @GetMapping("/group/names")
+    public Map<String, Object> getGroupNames(@RequestParam String friendUsername, HttpSession session) {
+        String username = (String) session.getAttribute("username");
+        return friendService.getGroupNamesExcludingCurrent(username, friendUsername);
+    }
+
+
 
 
 

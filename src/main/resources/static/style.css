@@ -178,3 +178,22 @@ body {
     cursor: pointer;
 }
 
+.context-menu {
+    background: white;
+    border: 1px solid #ccc;
+    z-index: 1000;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    width: 120px;
+}
+.context-menu ul {
+    list-style: none;
+    margin: 0;
+    padding: 5px 0;
+}
+.context-menu ul li {
+    padding: 6px 12px;
+    cursor: pointer;
+}
+.context-menu ul li:hover {
+    background-color: #eee;
+}

@@ -84,17 +84,6 @@ public class FriendService {
         return "已添加为好友";
     }
 
-    public String deleteFriend(String username, String friendUsername) {
-        Optional<User> user = userRepository.findByUsername(username);
-        Optional<User> friend = userRepository.findByUsername(friendUsername);
-        if (user.isEmpty() || friend.isEmpty()) return "用户不存在";
-
-        friendRepository.deleteByUserIdAndFriendId(user.get().getId(), friend.get().getId());
-        friendRepository.deleteByUserIdAndFriendId(friend.get().getId(), user.get().getId());
-
-        return "好友已删除";
-    }
-
 
     public List<Map<String, Object>> getPendingRequests(String receiverUsername) {
         Optional<User> receiver = userRepository.findByUsername(receiverUsername);
@@ -154,16 +143,6 @@ public class FriendService {
                 .orElse(Collections.emptyList());
     }
 
-    @Data
-    public class FriendGroupDTO {
-        private String groupName;
-        private List<User> friends;
-
-        public FriendGroupDTO(String groupName, List<User> friends) {
-            this.groupName = groupName;
-            this.friends = friends;
-        }
-    }
 
     public Map<String, List<String>> getFriendGroupMap(String username) {
         Optional<User> userOpt = userRepository.findByUsername(username);
@@ -181,5 +160,99 @@ public class FriendService {
 
         return result;
     }
+
+    public String moveFriendToGroup(String username, Long friendId, Long groupId) {
+        Optional<User> user = userRepository.findByUsername(username);
+        if (user.isEmpty()) return "用户不存在";
+
+        int updated = friendRepository.updateFriendGroup(user.get().getId(), friendId, groupId);
+        return updated > 0 ? "已移动" : "移动失败";
+    }
+
+    public String deleteFriend(String username, String friendUsername) {
+        Optional<User> userOpt = userRepository.findByUsername(username);
+        Optional<User> friendOpt = userRepository.findByUsername(friendUsername);
+        if (userOpt.isEmpty() || friendOpt.isEmpty()) return "用户不存在";
+
+        Long userId = userOpt.get().getId();
+        Long friendId = friendOpt.get().getId();
+
+        friendRepository.deleteByUserIdAndFriendId(userId, friendId);
+        friendRepository.deleteByUserIdAndFriendId(friendId, userId);
+
+        return "好友已删除";
+    }
+
+
+    public List<FriendGroup> getGroupListByUsername(String username) {
+        Optional<User> user = userRepository.findByUsername(username);
+        if (user.isEmpty()) return Collections.emptyList();
+        return friendGroupRepository.findByUserId(user.get().getId());
+    }
+
+    public String moveFriendToGroup(String username, String friendUsername, String targetGroupName) {
+        Optional<User> userOpt = userRepository.findByUsername(username);
+        Optional<User> friendOpt = userRepository.findByUsername(friendUsername);
+        if (userOpt.isEmpty() || friendOpt.isEmpty()) return "用户不存在";
+
+        Long userId = userOpt.get().getId();
+        Long friendId = friendOpt.get().getId();
+
+        // 获取或创建目标分组
+        FriendGroup group = friendGroupRepository
+                .findByUserIdAndGroupName(userId, targetGroupName)
+                .orElseGet(() -> {
+                    FriendGroup newGroup = new FriendGroup();
+                    newGroup.setUserId(userId);
+                    newGroup.setGroupName(targetGroupName);
+                    return friendGroupRepository.save(newGroup);
+                });
+
+        // 更新好友所在分组
+        int rowsUpdated = friendRepository.updateFriendGroup(userId, friendId, group.getId());
+        if (rowsUpdated > 0) {
+            return "移动成功";
+        } else {
+            return "移动失败";
+        }
+    }
+
+    public List<String> getGroupNamesByUsername(String username) {
+        Optional<User> userOpt = userRepository.findByUsername(username);
+        if (userOpt.isEmpty()) return Collections.emptyList();
+
+        List<FriendGroup> groups = friendGroupRepository.findByUserId(userOpt.get().getId());
+        return groups.stream().map(FriendGroup::getGroupName).collect(Collectors.toList());
+    }
+
+    public Map<String, Object> getGroupNamesExcludingCurrent(String username, String friendUsername) {
+        Optional<User> userOpt = userRepository.findByUsername(username);
+        Optional<User> friendOpt = userRepository.findByUsername(friendUsername);
+        if (userOpt.isEmpty() || friendOpt.isEmpty()) return Map.of();
+
+        Long userId = userOpt.get().getId();
+        Long friendId = friendOpt.get().getId();
+
+        // 查找当前好友的 groupId
+        Optional<Friend> relation = friendRepository.findByUserIdAndFriendId(userId, friendId);
+        if (relation.isEmpty()) return Map.of();
+
+        Long currentGroupId = relation.get().getGroupId();
+        Optional<FriendGroup> currentGroup = friendGroupRepository.findById(currentGroupId);
+        String currentGroupName = currentGroup.map(FriendGroup::getGroupName).orElse("");
+
+        List<String> allGroupNames = friendGroupRepository.findByUserId(userId).stream()
+                .map(FriendGroup::getGroupName)
+                .collect(Collectors.toList());
+
+        return Map.of(
+                "currentGroup", currentGroupName,
+                "groups", allGroupNames
+        );
+    }
+
+
+
+
 
 }
