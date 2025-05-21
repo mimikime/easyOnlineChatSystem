@@ -2,6 +2,7 @@ package com.chat.controller;
 
 import com.chat.model.User;
 import com.chat.service.UserService;
+import com.chat.util.SessionRegistry;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -45,6 +46,7 @@ public class UserController {
         boolean success = userService.login(user);
         if (success) {
             session.setAttribute("username", username); // 存入 session
+            SessionRegistry.addSession(username, session);
             return "redirect:/chat"; // 使用 redirect 避免表单重复提交
         } else {
             model.addAttribute("error", "用户名或密码错误");

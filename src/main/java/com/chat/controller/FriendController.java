@@ -84,8 +84,13 @@ public class FriendController {
         return friendService.getGroupNamesExcludingCurrent(username, friendUsername);
     }
 
-
-
+    @GetMapping("/deletion-notices")
+    public List<String> getDeletionNotices(HttpSession session) {
+        List<String> notices = (List<String>) session.getAttribute("deletionNotices");
+        if (notices == null) return Collections.emptyList();
+        session.removeAttribute("deletionNotices");
+        return notices;
+    }
 
 
 }

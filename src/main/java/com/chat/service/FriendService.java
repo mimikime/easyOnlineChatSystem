@@ -9,6 +9,8 @@ import com.chat.repository.FriendGroupRepository;
 import com.chat.repository.FriendRequestRepository;
 import com.chat.repository.FriendRepository;
 import com.chat.repository.UserRepository;
+import com.chat.util.SessionRegistry;
+import jakarta.servlet.http.HttpSession;
 import lombok.Data;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -180,15 +182,19 @@ public class FriendService {
         friendRepository.deleteByUserIdAndFriendId(userId, friendId);
         friendRepository.deleteByUserIdAndFriendId(friendId, userId);
 
+        // 通知被删除方
+        HttpSession friendSession = SessionRegistry.getSession(friendUsername);
+        if (friendSession != null) {
+            List<String> notices = (List<String>) friendSession.getAttribute("deletionNotices");
+            if (notices == null) notices = new ArrayList<>();
+            notices.add(username + " 删除了你，你可以重新添加好友。");
+            friendSession.setAttribute("deletionNotices", notices);
+        }
+
+
         return "好友已删除";
     }
 
-
-    public List<FriendGroup> getGroupListByUsername(String username) {
-        Optional<User> user = userRepository.findByUsername(username);
-        if (user.isEmpty()) return Collections.emptyList();
-        return friendGroupRepository.findByUserId(user.get().getId());
-    }
 
     public String moveFriendToGroup(String username, String friendUsername, String targetGroupName) {
         Optional<User> userOpt = userRepository.findByUsername(username);
@@ -217,13 +223,7 @@ public class FriendService {
         }
     }
 
-    public List<String> getGroupNamesByUsername(String username) {
-        Optional<User> userOpt = userRepository.findByUsername(username);
-        if (userOpt.isEmpty()) return Collections.emptyList();
 
-        List<FriendGroup> groups = friendGroupRepository.findByUserId(userOpt.get().getId());
-        return groups.stream().map(FriendGroup::getGroupName).collect(Collectors.toList());
-    }
 
     public Map<String, Object> getGroupNamesExcludingCurrent(String username, String friendUsername) {
         Optional<User> userOpt = userRepository.findByUsername(username);

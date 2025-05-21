@@ -545,6 +545,22 @@
             });
     }
 
+    window.onload = function () {
+        loadFriendGroups();  // 如果你已经有这个，可以保留
+
+        // 第五步：检查被删除通知
+        fetch('/friend/deletion-notices')
+            .then(res => res.json())
+            .then(data => {
+                data.forEach(msg => {
+                    if (confirm(msg + "\n是否重新添加对方为好友？")) {
+                        const name = msg.split(" ")[0];
+                        sendFriendRequest(name);  // 你已有的方法
+                    }
+                });
+            });
+    };
+
 
 </script>
 
