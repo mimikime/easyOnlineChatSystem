@@ -1,6 +1,7 @@
 
 package com.chat.controller;
 
+import com.chat.model.FriendGroup;
 import com.chat.service.FriendService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,5 +50,24 @@ public class FriendController {
     public String reject(@RequestParam Long requestId) {
         return friendService.rejectFriendRequest(requestId);
     }
+
+    @GetMapping("/groups")
+    @ResponseBody
+    public Map<String, List<String>> getFriendGroups(HttpSession session) {
+        String username = (String) session.getAttribute("username");
+        if (username == null) return Collections.emptyMap();
+
+        return friendService.getFriendGroupMap(username); // 返回 Map<String, List<String>>
+    }
+
+
+    @GetMapping("/group/list")
+    @ResponseBody
+    public List<FriendGroup> listGroups(HttpSession session) {
+        String username = (String) session.getAttribute("username");
+        return friendService.getGroups(username);  // 返回 List<FriendGroup>
+    }
+
+
 
 }

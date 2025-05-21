@@ -1,6 +1,7 @@
 
 package com.chat.service;
 
+import com.chat.model.Friend;
 import com.chat.model.FriendGroup;
 import com.chat.model.FriendRequest;
 import com.chat.model.User;
@@ -8,10 +9,12 @@ import com.chat.repository.FriendGroupRepository;
 import com.chat.repository.FriendRequestRepository;
 import com.chat.repository.FriendRepository;
 import com.chat.repository.UserRepository;
+import lombok.Data;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class FriendService {
@@ -119,6 +122,64 @@ public class FriendService {
         request.setStatus("REJECTED");
         friendRequestRepository.save(request);
         return "已拒绝";
+    }
+
+    public Map<String, List<String>> getFriendGroupsWithFriends(String username) {
+        Optional<User> userOpt = userRepository.findByUsername(username);
+        if (userOpt.isEmpty()) return Map.of();
+
+        Long userId = userOpt.get().getId();
+
+        List<FriendGroup> groups = friendGroupRepository.findByUserId(userId);
+        Map<Long, String> groupIdToName = new HashMap<>();
+        for (FriendGroup g : groups) {
+            groupIdToName.put(g.getId(), g.getGroupName());
+        }
+
+        List<Friend> friends = friendRepository.findByUserId(userId);
+
+        Map<String, List<String>> result = new LinkedHashMap<>();
+        for (Friend f : friends) {
+            String groupName = groupIdToName.getOrDefault(f.getGroupId(), "未分组");
+            userRepository.findById(f.getFriendId()).ifPresent(friendUser -> {
+                result.computeIfAbsent(groupName, k -> new ArrayList<>()).add(friendUser.getUsername());
+            });
+        }
+        return result;
+    }
+
+    public List<FriendGroup> getGroups(String username) {
+        Optional<User> user = userRepository.findByUsername(username);
+        return user.map(value -> friendGroupRepository.findByUserId(value.getId()))
+                .orElse(Collections.emptyList());
+    }
+
+    @Data
+    public class FriendGroupDTO {
+        private String groupName;
+        private List<User> friends;
+
+        public FriendGroupDTO(String groupName, List<User> friends) {
+            this.groupName = groupName;
+            this.friends = friends;
+        }
+    }
+
+    public Map<String, List<String>> getFriendGroupMap(String username) {
+        Optional<User> userOpt = userRepository.findByUsername(username);
+        if (userOpt.isEmpty()) return Collections.emptyMap();
+
+        Long userId = userOpt.get().getId();
+        List<FriendGroup> groups = friendGroupRepository.findByUserId(userId);
+        Map<String, List<String>> result = new LinkedHashMap<>();
+
+        for (FriendGroup group : groups) {
+            List<User> friends = friendRepository.findFriendsByGroupId(group.getId());
+            List<String> names = friends.stream().map(User::getUsername).toList();
+            result.put(group.getGroupName(), names);  // 确保加的是用户名列表
+        }
+
+        return result;
     }
 
 }

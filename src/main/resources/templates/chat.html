@@ -153,6 +153,8 @@
         }
     </style>
 </head>
+
+
 <!-- 添加好友模态框 -->
 <div id="addModal" class="modal">
     <div class="modal-content">
@@ -170,6 +172,25 @@
         <button onclick="closeVerifyModal()">关闭</button>
     </div>
 </div>
+<!-- 新增分组模态框 -->
+<div id="friendGroupModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal('friendGroupModal')">&times;</span>
+        <h3>新增好友分组</h3>
+        <input type="text" id="friendGroupNameInput" placeholder="请输入分组名称">
+        <button onclick="submitFriendGroup()">确认添加</button>
+    </div>
+</div>
+
+<!-- 新建群模态框 -->
+<div id="chatGroupModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal('chatGroupModal')">&times;</span>
+        <h3>新建聊天群组</h3>
+        <input type="text" id="chatGroupNameInput" placeholder="请输入群名称">
+        <button onclick="submitChatGroup()">确认创建</button>
+    </div>
+</div>
 
 
 
@@ -180,10 +201,9 @@
             <h2>用户：<span th:text="${username}">用户名</span></h2>
             <div class="section">
                 <h3>好友分组</h3>
-                <ul>
-                    <li th:each="group : ${friendGroups}" th:text="${group}">分组名</li>
-                </ul>
+                <div id="friend-groups-container"></div>
             </div>
+
 
             <div class="section">
                 <h3>群组</h3>
@@ -194,6 +214,8 @@
 
         </div>
         <div class="actions">
+            <button onclick="showCreateFriendGroupModal()">新增分组</button>
+            <button onclick="showCreateGroupModal()">新建群</button>
             <button onclick="showVerifyModal()">好友验证</button>
             <button onclick="showAddFriendModal()">添加好友</button>
             <button onclick="alert('添加群')">添加群</button>
@@ -287,7 +309,84 @@
     function closeVerifyModal() {
         document.getElementById("verifyModal").style.display = "none";
     }
+
+
+        function loadFriendGroups() {
+        fetch('/friend/groups')
+            .then(res => res.json())
+            .then(data => {
+                const container = document.getElementById('friend-groups-container');
+                container.innerHTML = '';
+
+                for (const groupName in data) {
+                    const groupDiv = document.createElement('div');
+                    const groupTitle = document.createElement('h4');
+                    groupTitle.innerText = groupName;
+                    groupDiv.appendChild(groupTitle);
+
+                    const ul = document.createElement('ul');
+                    data[groupName].forEach(friend => {
+                        const li = document.createElement('li');
+                        li.innerText = friend;
+                        ul.appendChild(li);
+                    });
+
+                    groupDiv.appendChild(ul);
+                    container.appendChild(groupDiv);
+                }
+            })
+            .catch(e => console.error("加载好友分组失败", e));
+    }
+        window.onload = loadFriendGroups;
+
+        function showCreateFriendGroupModal() {
+        document.getElementById('friendGroupModal').style.display = 'block';
+    }
+
+        function showCreateGroupModal() {
+        document.getElementById('chatGroupModal').style.display = 'block';
+    }
+
+        function submitFriendGroup() {
+        const name = document.getElementById('friendGroupNameInput').value.trim();
+        if (!name) return alert("请输入分组名称");
+
+        fetch('/friend/group/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'groupName=' + encodeURIComponent(name)
+    })
+        .then(res => res.text())
+        .then(msg => {
+        alert(msg);
+        document.getElementById('friendGroupModal').style.display = 'none';
+        location.reload();  // 刷新界面
+    });
+    }
+
+        function submitChatGroup() {
+        const name = document.getElementById('chatGroupNameInput').value.trim();
+        if (!name) return alert("请输入群名称");
+
+        fetch('/group/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'groupName=' + encodeURIComponent(name)
+    })
+        .then(res => res.text())
+        .then(msg => {
+        alert(msg);
+        document.getElementById('chatGroupModal').style.display = 'none';
+        location.reload();  // 刷新界面
+    });
+    }
+
+    function closeModal(id) {
+        document.getElementById(id).style.display = 'none';
+    }
+
 </script>
+
 
 </body>
 </html>

@@ -48,9 +48,14 @@ public class FriendGroup {
     public void setId(Long id) {
         this.id = id;
     }
-
-    private String groupName;
+    
 
     @Column(name = "created_at")
     private java.sql.Timestamp createdAt;
+
+    @Column(name = "group_name", nullable = false)
+    private String groupName;
+
+
+
 }
