@@ -256,7 +256,7 @@
             当前聊天对象：<span id="chat-target">未选择</span>
         </div>
         <div class="chat-toolbar">
-            <button onclick="alert('下载聊天记录')">下载记录</button>
+            <button onclick="downloadChatHistory()">下载记录</button>
         </div>
         <div class="chat-messages" id="chatMessages">
             <!-- 聊天消息区域 -->
@@ -710,7 +710,37 @@
             .catch(e => console.error("加载群组失败", e));
     }
 
+    function downloadChatHistory() {
+        if (!currentChatTarget || !currentChatType) {
+            alert("请先选择一个聊天对象或群组");
+            return;
+        }
 
+        let url;
+        if (currentChatType === 'private') {
+            url = `/message/history?withUser=${encodeURIComponent(currentChatTarget)}`;
+        } else {
+            url = `/message/group/history?groupId=${encodeURIComponent(currentChatTarget)}`;
+        }
+
+        fetch(url)
+            .then(res => res.json())
+            .then(messages => {
+                let content = messages.map(msg =>
+                    `[${msg.timestamp}] ${msg.senderUsername || '系统'}: ${msg.content}`
+                ).join('\n');
+
+                const blob = new Blob([content], { type: 'text/plain' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `${currentChatTarget}_chat_history.txt`;
+                link.click();
+            })
+            .catch(err => {
+                console.error("下载失败", err);
+                alert("下载聊天记录失败");
+            });
+    }
 
 </script>
 
