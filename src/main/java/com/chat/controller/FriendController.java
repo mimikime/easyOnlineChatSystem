@@ -5,9 +5,8 @@ import com.chat.model.FriendGroup;
 import com.chat.service.FriendService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
+
 
 import java.util.Collections;
 import java.util.List;
@@ -91,6 +90,5 @@ public class FriendController {
         session.removeAttribute("deletionNotices");
         return notices;
     }
-
 
 }

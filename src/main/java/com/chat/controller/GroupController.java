@@ -7,6 +7,8 @@ import com.chat.service.FriendService;
 import com.chat.service.GroupService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Collections;
@@ -55,5 +57,27 @@ public class GroupController {
 
         return friendService.getFriendGroupsWithFriends(username);
     }
+
+    @GetMapping("/my")
+    @ResponseBody
+    public List<Group> getMyGroups(HttpSession session) {
+        String username = (String) session.getAttribute("username");
+        return groupService.getGroupsByUsername(username);
+    }
+
+    @PostMapping("/join")
+    public ResponseEntity<String> joinGroup(@RequestParam String groupName, HttpSession session) {
+        String username = (String) session.getAttribute("username");
+        if (username == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("未登录");
+
+        boolean result = groupService.joinGroupByName(username, groupName);
+        if (result) {
+            return ResponseEntity.ok("已成功加入群聊");
+        } else {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("群不存在或你已加入");
+        }
+    }
+
+
 
 }

@@ -1,6 +1,8 @@
 package com.chat.controller;
 
+import com.chat.model.Group;
 import com.chat.model.User;
+import com.chat.service.GroupService;
 import com.chat.service.UserService;
 import com.chat.util.SessionRegistry;
 import jakarta.servlet.http.HttpSession;
@@ -9,11 +11,17 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @Controller
 public class UserController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private GroupService groupService;
+
 
 
     @PostMapping("/auth/register")
@@ -58,9 +66,14 @@ public class UserController {
     public String chat(Model model, HttpSession session) {
         Object username = session.getAttribute("username");
         if (username == null) {
-            return "redirect:/login"; // 未登录跳回登录页
+            return "redirect:/login";
         }
+
         model.addAttribute("username", username);
+
+        List<Group> chatGroups = groupService.getGroupsByUsername(username.toString());
+        model.addAttribute("chatGroups", chatGroups);
+
         return "chat";
     }
 

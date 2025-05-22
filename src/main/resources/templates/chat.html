@@ -192,6 +192,16 @@
     </div>
 </div>
 
+<div id="joinGroupModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeJoinGroupModal()">&times;</span>
+        <h3>加入群聊</h3>
+        <input type="text" id="joinGroupNameInput" placeholder="请输入群名称">
+        <button onclick="submitJoinGroup()">确认加入</button>
+    </div>
+</div>
+
+
 <div id="contextMenu" class="context-menu" style="display: none; position: absolute;">
     <ul>
         <li onclick="deleteFriend()">删除好友</li>
@@ -227,10 +237,9 @@
 
             <div class="section">
                 <h3>群组</h3>
-                <ul>
-                    <li th:each="group : ${chatGroups}" th:text="${group.name}">群组名</li>
-                </ul>
+                <div id="group-list-container"></div>
             </div>
+
 
         </div>
         <div class="actions">
@@ -238,7 +247,7 @@
             <button onclick="showCreateGroupModal()">新建群</button>
             <button onclick="showVerifyModal()">好友验证</button>
             <button onclick="showAddFriendModal()">添加好友</button>
-            <button onclick="alert('添加群')">添加群</button>
+            <button onclick="showJoinGroupModal()">加入群</button>
         </div>
     </div>
 
@@ -322,7 +331,7 @@
             .then(resp => resp.text())
             .then(msg => {
                 alert(msg);
-                showVerifyModal(); // 刷新请求列表
+                showVerifyModal();
             });
     }
 
@@ -348,7 +357,6 @@
                     data[groupName].forEach(username => {
                         const li = document.createElement('li');
                         li.innerText = username;
-                        // 如果你没有 ID，就不要绑定 ID 相关操作
                         li.oncontextmenu = (e) => showFriendContextMenu(e, username); // 用用户名作为 ID 标识
                         ul.appendChild(li);
                     });
@@ -520,7 +528,7 @@
             .catch(err => alert("加载分组失败：" + err));
     }
 
-    let currentFriend = ''; // 保存右键点击的好友名
+    let currentFriend = '';
 
 
 
@@ -546,20 +554,68 @@
     }
 
     window.onload = function () {
-        loadFriendGroups();  // 如果你已经有这个，可以保留
-
-        // 第五步：检查被删除通知
+        loadFriendGroups();
+        loadChatGroups();
         fetch('/friend/deletion-notices')
             .then(res => res.json())
             .then(data => {
                 data.forEach(msg => {
                     if (confirm(msg + "\n是否重新添加对方为好友？")) {
                         const name = msg.split(" ")[0];
-                        sendFriendRequest(name);  // 你已有的方法
+                        sendFriendRequest(name);
                     }
                 });
             });
     };
+
+    function loadChatGroups() {
+        fetch('/group/my')  // 后端群组接口（你可以自定义为实际地址）
+            .then(res => res.json())
+            .then(groups => {
+                const container = document.getElementById('group-list-container');
+                container.innerHTML = '';
+
+                if (!groups || groups.length === 0) {
+                    container.innerHTML = '<p>暂无群组</p>';
+                    return;
+                }
+
+                const ul = document.createElement('ul');
+                groups.forEach(group => {
+                    const li = document.createElement('li');
+                    li.textContent = group.name;
+                    ul.appendChild(li);
+                });
+
+                container.appendChild(ul);
+            })
+            .catch(e => console.error("加载群组失败：", e));
+    }
+
+    function showJoinGroupModal() {
+        document.getElementById('joinGroupModal').style.display = 'block';
+    }
+
+    function closeJoinGroupModal() {
+        document.getElementById('joinGroupModal').style.display = 'none';
+    }
+
+    function submitJoinGroup() {
+        const name = document.getElementById('joinGroupNameInput').value.trim();
+        if (!name) return alert("请输入群名称");
+
+        fetch('/group/join', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'groupName=' + encodeURIComponent(name)
+        })
+            .then(res => res.text().then(text => alert(text)))
+            .then(() => {
+                closeJoinGroupModal();
+                loadChatGroups(); // 重新加载群列表
+            });
+    }
+
 
 
 </script>

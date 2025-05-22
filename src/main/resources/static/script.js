@@ -1,4 +1,3 @@
-
 document.addEventListener("DOMContentLoaded", function () {
     const loginForm = document.getElementById("loginForm");
     const registerForm = document.getElementById("registerForm");
