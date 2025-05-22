@@ -256,7 +256,6 @@
             当前聊天对象：<span id="chat-target">未选择</span>
         </div>
         <div class="chat-toolbar">
-            <button onclick="alert('查看历史记录')">历史记录</button>
             <button onclick="alert('下载聊天记录')">下载记录</button>
         </div>
         <div class="chat-messages" id="chatMessages">
@@ -264,7 +263,7 @@
         </div>
         <div class="chat-input">
             <textarea placeholder="输入消息..."></textarea>
-            <button>发送</button>
+            <button onclick="sendMessage()">发送</button>
         </div>
     </div>
 </div>
@@ -354,12 +353,21 @@
                     groupDiv.appendChild(groupTitle);
 
                     const ul = document.createElement('ul');
-                    data[groupName].forEach(username => {
+                    data[groupName].forEach(friend => {
                         const li = document.createElement('li');
-                        li.innerText = username;
-                        li.oncontextmenu = (e) => showFriendContextMenu(e, username); // 用用户名作为 ID 标识
+                        li.innerText = friend;
+
+                        li.onclick = () => loadPrivateChat(friend);
+
+                        li.addEventListener('contextmenu', (e) => {
+                            e.preventDefault();
+                            selectedFriendUsername = friend;
+                            showContextMenu(e.pageX, e.pageY);
+                        });
+
                         ul.appendChild(li);
                     });
+
 
 
                     groupDiv.appendChild(ul);
@@ -451,16 +459,19 @@
                     groupDiv.appendChild(groupTitle);
 
                     const ul = document.createElement('ul');
-                    data[groupName].forEach(friend => {
+                    data[groupName].forEach(username => {
                         const li = document.createElement('li');
-                        li.innerText = friend;
+                        li.innerText = username;
 
-                        // 添加右键事件
-                        li.addEventListener('contextmenu', (e) => {
-                            e.preventDefault();
-                            selectedFriendUsername = friend;
-                            showContextMenu(e.pageX, e.pageY);
-                        });
+                        // 左键点击进入聊天
+                        li.onclick = () => {
+                            document.getElementById('chat-target').innerText = username;
+                            currentChatTarget = { type: 'user', name: username };
+                            loadPrivateChat(username);
+                        };
+
+                        // 右键菜单
+                        li.oncontextmenu = (e) => showFriendContextMenu(e, username);
 
                         ul.appendChild(li);
                     });
@@ -468,9 +479,11 @@
                     groupDiv.appendChild(ul);
                     container.appendChild(groupDiv);
                 }
-            })
-            .catch(e => console.error("加载好友分组失败", e));
+            });
     }
+
+    window.onload = loadFriendGroups;
+
 
     function showContextMenu(x, y) {
         const menu = document.getElementById('contextMenu');
@@ -568,29 +581,8 @@
             });
     };
 
-    function loadChatGroups() {
-        fetch('/group/my')  // 后端群组接口（你可以自定义为实际地址）
-            .then(res => res.json())
-            .then(groups => {
-                const container = document.getElementById('group-list-container');
-                container.innerHTML = '';
 
-                if (!groups || groups.length === 0) {
-                    container.innerHTML = '<p>暂无群组</p>';
-                    return;
-                }
 
-                const ul = document.createElement('ul');
-                groups.forEach(group => {
-                    const li = document.createElement('li');
-                    li.textContent = group.name;
-                    ul.appendChild(li);
-                });
-
-                container.appendChild(ul);
-            })
-            .catch(e => console.error("加载群组失败：", e));
-    }
 
     function showJoinGroupModal() {
         document.getElementById('joinGroupModal').style.display = 'block';
@@ -612,8 +604,110 @@
             .then(res => res.text().then(text => alert(text)))
             .then(() => {
                 closeJoinGroupModal();
-                loadChatGroups(); // 重新加载群列表
+                loadChatGroups();
             });
+    }
+
+    let currentChatType = null;
+    let currentChatTarget = null;
+
+    function renderMessages(messages) {
+        const container = document.getElementById('chatMessages');
+        container.innerHTML = '';
+        messages.forEach(msg => {
+            const div = document.createElement('div');
+            div.textContent = `[${msg.senderUsername}] ${msg.content}`;
+            container.appendChild(div);
+        });
+    }
+
+
+    // 加载私聊历史记录
+    function loadPrivateChat(username) {
+        currentChatType = 'private';
+        currentChatTarget = username;
+        document.getElementById('chat-target').innerText = username;
+
+        fetch(`/message/history?withUser=${encodeURIComponent(username)}`)
+            .then(res => res.json())
+            .then(renderMessages)
+            .catch(err => console.error("加载私聊记录失败", err));
+    }
+
+    // 加载群聊历史记录
+    function loadGroupChat(groupId, groupName) {
+        currentChatType = 'group';
+        currentChatTarget = groupId;
+        document.getElementById('chat-target').innerText = groupName;
+
+        fetch(`/message/group/history?groupId=${groupId}`)
+            .then(res => res.json())
+            .then(renderMessages)
+            .catch(err => console.error("加载群聊记录失败", err));
+    }
+
+    // 发送消息
+    function sendMessage() {
+        const textarea = document.querySelector('.chat-input textarea');
+        const content = textarea.value.trim();
+        if (!content || !currentChatTarget) return;
+
+        const url = currentChatType === 'private'
+            ? '/message/send'
+            : '/message/group/send';
+        const body = currentChatType === 'private'
+            ? `to=${encodeURIComponent(currentChatTarget)}&content=${encodeURIComponent(content)}`
+            : `groupId=${currentChatTarget}&content=${encodeURIComponent(content)}`;
+
+        fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: body
+        })
+            .then(res => res.text())
+            .then(() => {
+                textarea.value = '';
+                currentChatType === 'private'
+                    ? loadPrivateChat(currentChatTarget)
+                    : loadGroupChat(currentChatTarget, document.getElementById('chat-target').innerText);
+            });
+    }
+
+    function reloadHistory() {
+        if (currentChatType === 'private') {
+            loadPrivateChat(currentChatTarget);
+        } else if (currentChatType === 'group') {
+            loadGroupChat(currentChatTarget, document.getElementById('chat-target').innerText);
+        }
+    }
+
+    function loadChatGroups() {
+        fetch('/group/my')
+            .then(res => res.json())
+            .then(data => {
+                const container = document.getElementById('group-list-container');
+                container.innerHTML = '';
+
+                const ul = document.createElement('ul');
+                ul.style.listStyle = 'none';
+                ul.style.padding = '0';
+                ul.style.margin = '0';
+
+                data.forEach(group => {
+                    const li = document.createElement('li');
+                    li.innerText = group.name;
+                    li.style.cursor = 'pointer';
+                    li.style.padding = '6px 10px';
+                    li.style.borderRadius = '4px';
+                    li.addEventListener('click', () => loadGroupChat(group.id, group.name));
+                    li.addEventListener('mouseover', () => li.style.backgroundColor = '#34495e');
+                    li.addEventListener('mouseout', () => li.style.backgroundColor = '');
+                    ul.appendChild(li);
+                });
+
+                container.appendChild(ul);
+            })
+            .catch(e => console.error("加载群组失败", e));
     }
 
 
