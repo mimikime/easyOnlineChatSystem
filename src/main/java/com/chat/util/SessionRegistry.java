@@ -14,7 +14,4 @@ public class SessionRegistry {
         return sessions.get(username);
     }
 
-    public static void removeSession(String username) {
-        sessions.remove(username);
-    }
 }

@@ -1,7 +1,5 @@
-
 package com.chat.repository;
 
-import com.chat.model.Friend;
 import com.chat.model.FriendGroup;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -14,10 +12,6 @@ public interface FriendGroupRepository extends JpaRepository<FriendGroup, Long> 
 
     Optional<FriendGroup> findByUserIdAndGroupName(Long userId, String groupName);
 
-    boolean existsByGroupName(String groupName);
-
     List<FriendGroup> findByUserId(Long userId);
-
-
 
 }

@@ -463,6 +463,14 @@
                         const li = document.createElement('li');
                         li.innerText = username;
 
+
+                        // 添加右键事件
+                        li.addEventListener('contextmenu', (e) => {
+                            e.preventDefault();
+                            selectedFriendUsername = username;
+                            showContextMenu(e.pageX, e.pageY);
+                        });
+
                         // 左键点击进入聊天
                         li.onclick = () => {
                             document.getElementById('chat-target').innerText = username;
@@ -581,6 +589,15 @@
             });
     };
 
+    function sendFriendRequest(targetUsername) {
+        fetch('/friend/request?targetUsername=' + encodeURIComponent(targetUsername), {
+            method: 'POST'
+        })
+            .then(res => res.text())
+            .then(msg => alert("请求结果: " + msg))
+            .catch(err => console.error("发送请求失败", err));
+    }
+
 
 
 
@@ -673,14 +690,6 @@
             });
     }
 
-    function reloadHistory() {
-        if (currentChatType === 'private') {
-            loadPrivateChat(currentChatTarget);
-        } else if (currentChatType === 'group') {
-            loadGroupChat(currentChatTarget, document.getElementById('chat-target').innerText);
-        }
-    }
-
     function loadChatGroups() {
         fetch('/group/my')
             .then(res => res.json())
@@ -743,7 +752,6 @@
     }
 
 </script>
-
 
 </body>
 </html>

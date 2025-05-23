@@ -1,4 +1,3 @@
-
 package com.chat.controller;
 
 import com.chat.model.FriendGroup;
@@ -6,8 +5,6 @@ import com.chat.service.FriendService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
-
-
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -90,5 +87,4 @@ public class FriendController {
         session.removeAttribute("deletionNotices");
         return notices;
     }
-
 }

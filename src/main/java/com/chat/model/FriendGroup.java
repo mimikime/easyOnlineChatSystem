@@ -9,7 +9,6 @@ import java.sql.Timestamp;
 @Table(name = "friend_groups")
 @Data
 public class FriendGroup {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -47,14 +46,11 @@ public class FriendGroup {
     public void setId(Long id) {
         this.id = id;
     }
-    
 
     @Column(name = "created_at")
     private java.sql.Timestamp createdAt;
 
     @Column(name = "group_name", nullable = false)
     private String groupName;
-
-
 
 }

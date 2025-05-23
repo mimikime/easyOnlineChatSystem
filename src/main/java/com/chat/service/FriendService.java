@@ -162,14 +162,6 @@ public class FriendService {
         return result;
     }
 
-    public String moveFriendToGroup(String username, Long friendId, Long groupId) {
-        Optional<User> user = userRepository.findByUsername(username);
-        if (user.isEmpty()) return "用户不存在";
-
-        int updated = friendRepository.updateFriendGroup(user.get().getId(), friendId, groupId);
-        return updated > 0 ? "已移动" : "移动失败";
-    }
-
     public String deleteFriend(String username, String friendUsername) {
         Optional<User> userOpt = userRepository.findByUsername(username);
         Optional<User> friendOpt = userRepository.findByUsername(friendUsername);
@@ -249,9 +241,4 @@ public class FriendService {
                 "groups", allGroupNames
         );
     }
-
-
-
-
-
 }

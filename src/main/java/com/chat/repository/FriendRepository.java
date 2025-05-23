@@ -6,7 +6,6 @@ import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.util.List;
 import java.util.Optional;
 
@@ -26,12 +25,10 @@ public interface FriendRepository extends JpaRepository<Friend, Long> {
     @Query(value = "SELECT * FROM friends WHERE user_id = ?1", nativeQuery = true)
     List<Friend> findByUserId(Long userId);
 
-
     @Modifying
     @Transactional
     @Query("SELECT u FROM User u JOIN Friend f ON u.id = f.friendId WHERE f.groupId = :groupId")
     List<User> findFriendsByGroupId(@Param("groupId") Long groupId);
-
 
     @Modifying
     @Transactional

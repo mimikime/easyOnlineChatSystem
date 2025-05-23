@@ -2,9 +2,7 @@ package com.chat.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
-
 import java.time.LocalDateTime;
-
 
 @Entity
 @Table(name = "`groups`", uniqueConstraints = {
@@ -29,7 +27,6 @@ public class Group {
     public Long getCreatorId() {
         return creatorId;
     }
-
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
